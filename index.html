@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='90' fill='%23F7F3E3'/><text x='256' y='340' text-anchor='middle' font-size='280'>📚</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/dexie@4/dist/dexie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{--bg:#F7F3E3;--sf:#EFEADB;--card:#fff;--ac:#4A7C3F;--acl:#D4E8C2;--acd:#8BBF6A;--sec:#E88D5A;--secl:#FDECD8;--tx:#2D3A20;--txd:#6B7A5A;--bd:#D4DCC4;--dng:#C04A3A;--ok:#4A7C3F;--ibg:#FDFBF3;--nbg:#EFEADB;--cs:#4A7C3F;--b1:rgba(212,232,194,.4);--b2:rgba(244,196,107,.3);--b3:rgba(232,141,90,.25)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -164,7 +165,8 @@ sun:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="
 moon:`<svg viewBox="0 0 24 24" fill="none"><path d="M20 14c-1.5 1-3.5 1.5-5.5 1.5C9.5 15.5 5.5 11.5 5.5 6.5c0-2 .5-4 1.5-5.5C3.5 2.5 1 6 1 10c0 5.5 4.5 10 10 10 4 0 7.5-2.5 9-6z" stroke="var(--cs)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 chL:`<svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="var(--cs)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 chR:`<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="var(--cs)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-book:`<svg viewBox="0 0 32 32" fill="none"><ellipse cx="16" cy="16" rx="14" ry="13" fill="var(--b1)" transform="rotate(-4 16 16)"/><path d="M9 6c-.5.5-1 1.5-1 3v12c0 2 1 3 3 3h10c2 0 3-1 3-3V9c0-1.5-.5-2.5-1-3" stroke="var(--cs)" stroke-width="2.2" stroke-linecap="round"/><path d="M8 27c0-1 0-3 2-3h12c2 0 2 2 2 3" stroke="var(--cs)" stroke-width="2.2" stroke-linecap="round"/><path d="M13 11h6M13 15h4" stroke="var(--cs)" stroke-width="1.8" stroke-linecap="round"/></svg>`
+book:`<svg viewBox="0 0 32 32" fill="none"><ellipse cx="16" cy="16" rx="14" ry="13" fill="var(--b1)" transform="rotate(-4 16 16)"/><path d="M9 6c-.5.5-1 1.5-1 3v12c0 2 1 3 3 3h10c2 0 3-1 3-3V9c0-1.5-.5-2.5-1-3" stroke="var(--cs)" stroke-width="2.2" stroke-linecap="round"/><path d="M8 27c0-1 0-3 2-3h12c2 0 2 2 2 3" stroke="var(--cs)" stroke-width="2.2" stroke-linecap="round"/><path d="M13 11h6M13 15h4" stroke="var(--cs)" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+scan:`<svg viewBox="0 0 32 32" fill="none"><ellipse cx="16" cy="16" rx="14" ry="13" fill="var(--b3)" transform="rotate(3 16 16)"/><path d="M6 10V7a3 3 0 013-3h3M20 4h3a3 3 0 013 3v3M26 22v3a3 3 0 01-3 3h-3M12 28H9a3 3 0 01-3-3v-3" stroke="var(--cs)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16h16" stroke="var(--cs)" stroke-width="2" stroke-linecap="round"/><path d="M8 12h2M8 20h2M22 12h2M22 20h2" stroke="var(--cs)" stroke-width="1.8" stroke-linecap="round"/></svg>`
 };
 function icon(n,s=22){return `<span style="display:inline-flex;width:${s}px;height:${s}px">${I[n]||''}</span>`}
 
@@ -237,7 +239,7 @@ function csvCell(v){const s=String(v??'');return(s.includes(',')||s.includes('"'
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-let S={tab:'home',books:[],themeId:'meadow',mode:'light',widgets:['recentBooks','totalBooks','totalReads','weekReads','streak','mostRead'],
+let S={tab:'home',books:[],themeId:'meadow',mode:'light',widgets:['recentBooks','quickAdd','totalBooks','totalReads','weekReads','streak','mostRead'],
   shelfSort:'recent',shelfSearch:'',expanded:null,confirmDel:null,
   addMode:'search',searchResults:[],searchLoading:false,
   calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -271,12 +273,11 @@ function renderView(){
 // ══════════════════════════════════════════
 // HOME
 // ══════════════════════════════════════════
-const WDEFS={recentBooks:{l:'Last Read',f:true},totalBooks:{l:'Books Owned'},totalReads:{l:'Total Reads'},weekReads:{l:'This Week'},streak:{l:'Day Streak'},mostRead:{l:'Most Read',f:true}};
+const WDEFS={recentBooks:{l:'Last Read',f:true},quickAdd:{l:'Quick Add',f:true},totalBooks:{l:'Books Owned'},totalReads:{l:'Total Reads'},weekReads:{l:'This Week'},streak:{l:'Day Streak'},mostRead:{l:'Most Read',f:true}};
 
 async function renderHome(c){
   const s=await getGlobalStats(S.books);
   const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
-  let thCircles=Object.entries(TH).map(([id,t])=>`<button class="thc ${S.themeId===id?'on':''}" style="background:linear-gradient(135deg,${t.light.ac},${t.light.sec})" onclick="changeTheme('${id}')" title="${t.name}"></button>`).join('');
   let wHTML='';
   S.widgets.forEach(wid=>{
     const d=WDEFS[wid];if(!d)return;const full=d.f?' full':'';
@@ -284,6 +285,15 @@ async function renderHome(c){
       wHTML+=`<div class="wi${full}"><div class="wl">${d.l}</div>${s.recent.length?
         `<div class="rstrip">${s.recent.map(r=>`<div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:80px;max-width:90px;text-align:center">${coverHTML(r.book.cover,r.book.title,60)}<div style="font-size:11px;font-weight:700;font-family:'Baloo 2';color:var(--tx);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(r.book.title)}</div><div style="font-size:10px;color:var(--txd);font-family:'JetBrains Mono'">${daysAgoLabel(r.date)}</div></div>`).join('')}</div>`
         :`<div style="color:var(--txd);font-size:13px">No reads yet — pick a book tonight!</div>`}</div>`;
+    } else if(wid==='quickAdd'){
+      wHTML+=`<div class="wi${full}"><div class="wl">${d.l}</div>
+        <div style="display:flex;gap:8px">
+          <input class="inp" id="home-q" placeholder="Title, author, or ISBN…" onkeydown="if(event.key==='Enter')homeQuickSearch()" style="flex:1;font-size:13px;padding:8px 10px">
+          <button class="bp" onclick="homeQuickSearch()" style="padding:8px 14px;font-size:13px">Search</button>
+          <button class="bp" onclick="openScanner()" style="padding:8px 12px;font-size:16px;background:var(--sec)">${icon('scan',20)}</button>
+        </div>
+        <div id="home-q-result" style="margin-top:8px"></div>
+      </div>`;
     } else if(wid==='totalBooks'){wHTML+=`<div class="wi"><div class="wl">${d.l}</div><div class="wv">${s.totalBooks}</div><div class="ws">on your shelf</div></div>`}
     else if(wid==='totalReads'){wHTML+=`<div class="wi"><div class="wl">${d.l}</div><div class="wv">${s.totalReads}</div><div class="ws">all time</div></div>`}
     else if(wid==='weekReads'){wHTML+=`<div class="wi"><div class="wl">${d.l}</div><div class="wv">${s.weekReads}</div><div class="ws">since Sunday</div></div>`}
@@ -292,7 +302,7 @@ async function renderHome(c){
   });
   c.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
     <div style="font-size:13px;color:var(--txd)">${dateStr}</div>
-    <div style="display:flex;gap:6px;align-items:center">${thCircles}<button class="pill" onclick="openWidgetEditor()" style="margin-left:4px">Edit</button></div>
+    <button class="pill" onclick="openWidgetEditor()">Edit Dashboard</button>
   </div><div class="wg">${wHTML}</div>`;
 }
 
@@ -302,6 +312,93 @@ function openWidgetEditor(){
   document.body.appendChild(ov);
 }
 function toggleWidget(k,btn){if(S.widgets.includes(k))S.widgets=S.widgets.filter(w=>w!==k);else S.widgets.push(k);btn.classList.toggle('on');setSetting('widgets',S.widgets)}
+
+// Home quick search
+async function homeQuickSearch(){
+  const el=document.getElementById('home-q');if(!el||!el.value.trim())return;
+  const q=el.value.trim();const res=document.getElementById('home-q-result');
+  res.innerHTML='<div style="color:var(--txd);font-size:13px">Searching…</div>';
+  try{
+    const results=await searchOL(q);
+    if(!results.length){res.innerHTML='<div style="color:var(--dng);font-size:13px">No results found.</div>';return}
+    res.innerHTML=results.slice(0,3).map((r,i)=>`<div class="ccard" style="display:flex;gap:8px;padding:8px;align-items:center;margin-bottom:6px">${coverHTML(r.cover,r.title,36)}<div style="flex:1;min-width:0"><div class="btitle" style="font-size:13px">${esc(r.title)}</div><div class="bauth" style="font-size:11px">${esc(r.author)}</div></div><button class="bp" onclick="homeQuickAdd(${i})" style="padding:5px 12px;font-size:16px">+</button></div>`).join('');
+    window._homeResults=results;
+  }catch{res.innerHTML='<div style="color:var(--dng);font-size:13px">Search failed — check connection.</div>'}
+}
+async function homeQuickAdd(i){
+  const r=window._homeResults?.[i];if(!r)return;
+  if(S.books.find(b=>(r.isbn&&b.isbn===r.isbn)||b.title.toLowerCase()===r.title.toLowerCase())){toast('"'+r.title+'" already on shelf','var(--sec)');return}
+  await addBook(r);S.books=await db.books.toArray();toast('Added "'+r.title+'"!');renderView()
+}
+
+// ══════════════════════════════════════════
+// BARCODE SCANNER
+// ══════════════════════════════════════════
+let scannerInstance=null;
+
+function openScanner(){
+  const ov=document.createElement('div');ov.className='mover';ov.id='scan-overlay';
+  ov.innerHTML=`<div class="msheet" style="max-height:90vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0">Scan Barcode</h3>
+      <button class="bm" onclick="closeScanner()" style="padding:6px 14px;font-size:13px">Close</button>
+    </div>
+    <div style="font-size:12px;color:var(--txd);margin-bottom:10px">Point your camera at the barcode on the back of the book.</div>
+    <div id="scanner-box" style="width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:250px"></div>
+    <div id="scan-status" style="margin-top:10px;text-align:center;font-size:13px;color:var(--txd)"></div>
+    <div id="scan-result" style="margin-top:8px"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  startScanner();
+}
+
+function closeScanner(){
+  if(scannerInstance){try{scannerInstance.stop()}catch{}scannerInstance=null}
+  const ov=document.getElementById('scan-overlay');if(ov)ov.remove();
+}
+
+async function startScanner(){
+  const box=document.getElementById('scanner-box');
+  const status=document.getElementById('scan-status');
+  if(!box)return;
+  try{
+    scannerInstance=new Html5Qrcode('scanner-box');
+    await scannerInstance.start(
+      {facingMode:'environment'},
+      {fps:10,qrbox:{width:280,height:150},aspectRatio:1.5},
+      onScanSuccess,
+      ()=>{}
+    );
+  }catch(err){
+    status.innerHTML=`<div style="color:var(--dng)">Camera access denied or unavailable. Try entering the ISBN manually.</div>`;
+  }
+}
+
+async function onScanSuccess(decoded){
+  if(scannerInstance){try{await scannerInstance.stop()}catch{}scannerInstance=null}
+  const status=document.getElementById('scan-status');
+  const result=document.getElementById('scan-result');
+  const isbn=decoded.replace(/[\s-]/g,'');
+  status.innerHTML=`<div style="color:var(--ac);font-weight:700">Found ISBN: ${isbn}</div><div style="color:var(--txd);margin-top:4px">Looking up book…</div>`;
+  try{
+    const books=await searchOL(isbn);
+    if(books.length){
+      const b=books[0];
+      result.innerHTML=`<div class="ccard" style="display:flex;gap:10px;padding:10px;align-items:center">${coverHTML(b.cover,b.title,50)}<div style="flex:1;min-width:0"><div class="btitle">${esc(b.title)}</div><div class="bauth">${esc(b.author)}</div>${b.year?`<div style="font-size:11px;color:var(--txd);font-family:'JetBrains Mono'">${esc(b.year)}</div>`:''}</div><button class="bp" onclick="scanAdd()" style="padding:8px 16px;font-size:15px">Add</button></div>`;
+      window._scanResult=b;
+    }else{
+      status.innerHTML=`<div style="color:var(--dng)">ISBN ${isbn} not found in Open Library. Try searching by title instead.</div>`;
+    }
+  }catch{
+    status.innerHTML=`<div style="color:var(--dng)">Lookup failed — check connection.</div>`;
+  }
+}
+
+async function scanAdd(){
+  const b=window._scanResult;if(!b)return;
+  if(S.books.find(x=>(b.isbn&&x.isbn===b.isbn)||x.title.toLowerCase()===b.title.toLowerCase())){toast('"'+b.title+'" already on shelf','var(--sec)');closeScanner();return}
+  await addBook(b);S.books=await db.books.toArray();toast('Added "'+b.title+'"!');closeScanner();renderView()
+}
 
 // ══════════════════════════════════════════
 // SHELF
@@ -381,7 +478,7 @@ function doPick(){
 // ADD
 // ══════════════════════════════════════════
 function renderAdd(c){
-  c.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="pill ${S.addMode==='search'?'on':''}" onclick="S.addMode='search';renderView()">Search Online</button><button class="pill ${S.addMode==='manual'?'on':''}" onclick="S.addMode='manual';renderView()">Manual Entry</button></div><div id="add-body">${S.addMode==='search'?renderAddSearch():renderAddManual()}</div>`;
+  c.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="pill ${S.addMode==='search'?'on':''}" onclick="S.addMode='search';renderView()">Search Online</button><button class="pill ${S.addMode==='manual'?'on':''}" onclick="S.addMode='manual';renderView()">Manual Entry</button><button class="pill" onclick="openScanner()" style="background:var(--sec);color:var(--card);border-color:var(--sec)">${icon('scan',14)} Scan</button></div><div id="add-body">${S.addMode==='search'?renderAddSearch():renderAddManual()}</div>`;
 }
 function renderAddSearch(){
   return`<div style="display:flex;gap:8px;margin-bottom:10px"><input class="inp" style="flex:1" id="sq" placeholder="Title, author, or ISBN…" onkeydown="if(event.key==='Enter')doSearch()"><button class="bp" onclick="doSearch()" ${S.searchLoading?'disabled':''} style="white-space:nowrap">${S.searchLoading?'…':'Search'}</button></div><div id="serr"></div><div style="display:flex;flex-direction:column;gap:8px" id="sres">${S.searchResults.map((r,i)=>`<div class="ccard" style="display:flex;gap:10px;padding:10px;align-items:center">${coverHTML(r.cover,r.title,42)}<div style="flex:1;min-width:0"><div class="btitle">${esc(r.title)}</div><div class="bauth">${esc(r.author)}</div>${r.year?`<div style="font-size:11px;color:var(--txd);font-family:'JetBrains Mono'">${esc(r.year)}</div>`:''}</div><button class="bp" onclick="addFromSearch(${i})" style="padding:6px 14px;font-size:18px">+</button></div>`).join('')}</div>`;
@@ -463,7 +560,7 @@ function confirmClear(){
 }
 async function doClear(btn){
   await db.transaction('rw',db.books,db.reads,db.settings,async()=>{await db.books.clear();await db.reads.clear();await db.settings.clear()});
-  S.books=[];S.widgets=['recentBooks','totalBooks','totalReads','weekReads','streak','mostRead'];
+  S.books=[];S.widgets=['recentBooks','quickAdd','totalBooks','totalReads','weekReads','streak','mostRead'];
   btn.closest('.mover').remove();toast('All data cleared','var(--sec)');renderView()
 }
 
