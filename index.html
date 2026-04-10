@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1729">
+<title>Storytime Shelf</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='90' fill='%230f1729'/><text x='256' y='340' text-anchor='middle' font-size='280'>📚</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1729;
+  --surface: #1a2540;
+  --surface2: #223054;
+  --card: #162038;
+  --accent: #f0a858;
+  --accent-dim: #b07830;
+  --accent-glow: #f0a85833;
+  --text: #e8e0d4;
+  --dim: #8090a8;
+  --border: #2a3a58;
+  --danger: #c0453a;
+  --success: #4a9068;
+  --input-bg: #0d1220;
+  --radius: 12px;
+  --font: 'Zilla Slab', Georgia, serif;
+  --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { 
+  height: 100%; 
+  background: var(--bg); 
+  color: var(--text); 
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body { display: flex; flex-direction: column; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* App Layout */
+#app { display: flex; flex-direction: column; height: 100%; }
+.header { 
+  padding: 16px 16px 10px; 
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.header h1 { 
+  font-size: 22px; font-weight: 700; color: var(--accent); 
+  letter-spacing: -0.5px; line-height: 1;
+}
+.header .sub { font-size: 11px; color: var(--dim); margin-top: 3px; }
+
+.content { 
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 14px 14px calc(70px + var(--safe-b)); 
+  scroll-behavior: smooth;
+}
+
+/* Bottom Nav */
+.nav { 
+  display: flex; 
+  background: var(--surface); 
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-b);
+  flex-shrink: 0;
+  position: relative; z-index: 10;
+}
+.nav button { 
+  flex: 1; padding: 8px 0 6px; background: none; border: none; 
+  color: var(--dim); font-family: var(--font); font-size: 10px; font-weight: 600;
+  cursor: pointer; transition: color .2s; display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.nav button .icon { font-size: 20px; line-height: 1; }
+.nav button.active { color: var(--accent); }
+.nav button.active .icon { filter: drop-shadow(0 0 6px var(--accent-glow)); }
+
+/* View transitions */
+.view { display: none; animation: fadeUp .25s ease; }
+.view.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Cards */
+.card {
+  background: var(--card); border: 1px solid var(--border); 
+  border-radius: var(--radius); overflow: hidden; transition: all .2s;
+}
+.card:hover { border-color: var(--accent-dim); }
+
+/* Inputs */
+.input {
+  width: 100%; padding: 10px 14px; border-radius: 8px;
+  border: 1.5px solid var(--border); background: var(--input-bg);
+  color: var(--text); font-family: var(--font); font-size: 15px; outline: none;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--dim); opacity: .6; }
+
+/* Buttons */
+.btn {
+  padding: 10px 20px; border-radius: var(--radius); border: none;
+  font-family: var(--font); font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .15s; display: inline-flex;
+  align-items: center; justify-content: center; gap: 6px;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn-dim { background: var(--border); color: var(--dim); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-success { background: var(--success); color: #fff; }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+
+.pill {
+  padding: 5px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--dim); font-family: var(--font);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s;
+}
+.pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* Cover image */
+.cover { border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+.cover-placeholder {
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #b0783044, #f0a85822); flex-shrink: 0;
+}
+
+/* Widget grid */
+.widget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.widget {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; position: relative; overflow: hidden;
+}
+.widget.full { grid-column: 1 / -1; }
+.widget-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
+.widget-value { font-size: 26px; font-weight: 700; color: var(--accent); font-family: var(--mono); line-height: 1.1; }
+.widget-sub { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+/* Timer */
+.timer-display {
+  font-family: var(--mono); font-size: 42px; font-weight: 700;
+  color: var(--accent); text-align: center; letter-spacing: 2px;
+  text-shadow: 0 0 20px var(--accent-glow);
+}
+.timer-controls { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+
+/* Recent books strip */
+.recent-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0; }
+.recent-strip::-webkit-scrollbar { display: none; }
+.recent-item { 
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 80px; max-width: 90px; text-align: center;
+}
+.recent-item .title { font-size: 11px; color: var(--text); font-weight: 600; line-height: 1.3; 
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.recent-item .ago { font-size: 10px; color: var(--dim); font-family: var(--mono); }
+
+/* Book list */
+.book-row {
+  display: flex; gap: 10px; padding: 10px; align-items: center; cursor: pointer;
+}
+.book-info { flex: 1; min-width: 0; }
+.book-title {
+  font-weight: 700; font-size: 14px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.book-author { font-size: 12px; color: var(--dim); }
+.book-meta { display: flex; gap: 8px; margin-top: 3px; font-size: 11px; font-family: var(--mono); color: var(--dim); }
+.book-meta .accent { color: var(--accent); }
+.book-meta .green { color: var(--success); }
+
+/* Expanded detail */
+.book-detail { 
+  padding: 12px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.detail-grid { display: flex; gap: 12px; }
+.detail-fields { font-size: 12px; color: var(--dim); line-height: 1.7; }
+.detail-fields strong { color: var(--text); }
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Search results */
+.search-row {
+  display: flex; gap: 10px; padding: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+
+/* Settings */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.toggle {
+  width: 44px; height: 24px; border-radius: 12px; border: none;
+  background: var(--border); cursor: pointer; position: relative; transition: background .2s;
+}
+.toggle.on { background: var(--accent); }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform .2s;
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* Pick view */
+.pick-card {
+  background: var(--card); border: 2px solid var(--accent); border-radius: 16px;
+  padding: 24px; text-align: center; max-width: 320px; margin: 0 auto;
+  box-shadow: 0 0 30px var(--accent-glow);
+}
+.pick-card.shuffling { border-color: var(--border); box-shadow: none; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  z-index: 100; animation: toastIn .3s ease, toastOut .3s ease 1.7s forwards;
+  font-family: var(--font);
+}
+.toast-success { background: var(--success); color: #fff; }
+.toast-warn { background: var(--accent-dim); color: #fff; }
+.toast-error { background: var(--danger); color: #fff; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: #000a; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fadeIn .2s ease;
+}
+.modal {
+  background: var(--surface); border-radius: 16px 16px 0 0; 
+  padding: 20px 16px calc(20px + var(--safe-b)); width: 100%;
+  max-height: 80vh; overflow-y: auto;
+  animation: slideUp .25s ease;
+}
+.modal h3 { font-size: 17px; color: var(--accent); margin-bottom: 14px; }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes slideUp { from { transform: translateY(100%); } }
+
+/* Misc */
+.flex { display: flex; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-14 { margin-bottom: 14px; }
+.mb-20 { margin-bottom: 20px; }
+.mt-8 { margin-top: 8px; }
+.mt-14 { margin-top: 14px; }
+.text-center { text-align: center; }
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.shrink-0 { flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>Storytime Shelf</h1>
+    <div class="sub">Bedtime reading tracker</div>
+  </div>
+
+  <!-- Views -->
+  <div class="content" id="content">
+    <!-- HOME / DASHBOARD -->
+    <div class="view active" id="view-home"></div>
+    <!-- SHELF -->
+    <div class="view" id="view-shelf"></div>
+    <!-- PICK -->
+    <div class="view" id="view-pick"></div>
+    <!-- ADD -->
+    <div class="view" id="view-add"></div>
+    <!-- SETTINGS -->
+    <div class="view" id="view-settings"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="nav" id="nav"></nav>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA LAYER
+// ═══════════════════════════════════════════
+const STORAGE_KEY = 'storytime_library';
+const WIDGETS_KEY = 'storytime_widgets';
+const TIMER_KEY = 'storytime_timer';
+
+const DEFAULT_WIDGETS = ['recentBooks','timer','totalBooks','totalReads','weekReads','streak','mostRead'];
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+function saveData(books) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
+}
+function loadWidgets() {
+  try { return JSON.parse(localStorage.getItem(WIDGETS_KEY)) || DEFAULT_WIDGETS; } catch { return DEFAULT_WIDGETS; }
+}
+function saveWidgets(w) { localStorage.setItem(WIDGETS_KEY, JSON.stringify(w)); }
+function loadTimer() {
+  try { return JSON.parse(localStorage.getItem(TIMER_KEY)) || { running: false, start: 0, elapsed: 0 }; } catch { return { running: false, start: 0, elapsed: 0 }; }
+}
+function saveTimer(t) { localStorage.setItem(TIMER_KEY, JSON.stringify(t)); }
+
+let books = loadData();
+let activeWidgets = loadWidgets();
+let timer = loadTimer();
+let currentView = 'home';
+let expandedBookId = null;
+let timerInterval = null;
+
+// Helpers
+const today = () => new Date().toISOString().slice(0,10);
+const weekStart = () => { const d=new Date(); d.setDate(d.getDate()-d.getDay()); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); };
+const plural = (n,w) => `${n} ${w}${n===1?'':'s'}`;
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const daysAgo = (dateStr) => { if(!dateStr) return 999; return Math.floor((Date.now()-new Date(dateStr+'T12:00:00'))/86400000); };
+
+function getStats(book) {
+  const total = book.readLog.length;
+  const last = total ? book.readLog[total-1] : null;
+  const lastDate = last ? (last.date || last) : null;
+  const ws = weekStart();
+  const thisWeek = book.readLog.filter(r => (r.date||r) >= ws).length;
+  const lastDuration = last && last.duration ? last.duration : null;
+  return { total, lastDate, thisWeek, lastDuration };
+}
+
+function getGlobalStats() {
+  const ws = weekStart();
+  const totalBooks = books.length;
+  const totalReads = books.reduce((s,b) => s + b.readLog.length, 0);
+  const weekReads = books.reduce((s,b) => s + b.readLog.filter(r => (r.date||r) >= ws).length, 0);
+
+  // Streak: consecutive days with at least one read
+  const allDates = new Set();
+  books.forEach(b => b.readLog.forEach(r => allDates.add(r.date || r)));
+  let streak = 0;
+  const d = new Date(); d.setHours(12,0,0,0);
+  // Check if today has a read, if not start from yesterday
+  let checkDate = today();
+  if (!allDates.has(checkDate)) {
+    const yd = new Date(d); yd.setDate(yd.getDate()-1);
+    checkDate = yd.toISOString().slice(0,10);
+  }
+  const cd = new Date(checkDate+'T12:00:00');
+  for (let i=0; i<365; i++) {
+    const ds = cd.toISOString().slice(0,10);
+    if (allDates.has(ds)) { streak++; cd.setDate(cd.getDate()-1); }
+    else break;
+  }
+
+  // Most read
+  let mostRead = null;
+  let mostCount = 0;
+  books.forEach(b => { if(b.readLog.length > mostCount) { mostCount = b.readLog.length; mostRead = b; }});
+
+  // Recent 3
+  const allReads = [];
+  books.forEach(b => b.readLog.forEach(r => {
+    allReads.push({ book: b, date: r.date || r, duration: r.duration || null });
+  }));
+  allReads.sort((a,b) => b.date.localeCompare(a.date));
+  // Deduplicate by book (only latest per book)
+  const seen = new Set();
+  const recent = [];
+  for (const r of allReads) {
+    if (!seen.has(r.book.id)) { seen.add(r.book.id); recent.push(r); }
+    if (recent.length >= 3) break;
+  }
+
+  return { totalBooks, totalReads, weekReads, streak, mostRead, mostCount, recent };
+}
+
+function addBook(data) {
+  const book = {
+    id: genId(),
+    title: data.title || 'Untitled',
+    author: data.author || '',
+    isbn: data.isbn || '',
+    cover: data.cover || '',
+    pageCount: data.pageCount || null,
+    publisher: data.publisher || '',
+    year: data.year || '',
+    readLog: [],
+    addedAt: new Date().toISOString()
+  };
+  books.unshift(book);
+  saveData(books);
+  return book;
+}
+
+function removeBook(id) {
+  books = books.filter(b => b.id !== id);
+  saveData(books);
+}
+
+function logRead(id, duration) {
+  const entry = { date: today() };
+  if (duration && duration > 0) entry.duration = duration;
+  books = books.map(b => b.id === id ? { ...b, readLog: [...b.readLog, entry] } : b);
+  saveData(books);
+}
+
+function pickNextBook() {
+  if (!books.length) return null;
+  const ws = weekStart();
+  const scored = books.map(b => {
+    const weekReads = b.readLog.filter(r => (r.date||r) >= ws).length;
+    const totalReads = b.readLog.length;
+    const last = b.readLog.length ? (b.readLog[b.readLog.length-1].date || b.readLog[b.readLog.length-1]) : null;
+    const daysSince = last ? daysAgo(last) : 999;
+    const score = (weekReads===0?50:0) + daysSince*2 + Math.max(0,10-totalReads)*3 + Math.random()*10;
+    return { book: b, score };
+  });
+  scored.sort((a,b) => b.score - a.score);
+  const pool = scored.slice(0, Math.min(5, scored.length));
+  const total = pool.reduce((s,p)=>s+p.score,0);
+  let r = Math.random()*total;
+  for (const p of pool) { r -= p.score; if (r<=0) return p.book; }
+  return pool[0].book;
+}
+
+// ═══════════════════════════════════════════
+// OPEN LIBRARY API
+// ═══════════════════════════════════════════
+async function searchOpenLibrary(query) {
+  const isISBN = /^[\d\-]{10,17}$/.test(query.replace(/[\s-]/g,''));
+  if (isISBN) {
+    const clean = query.replace(/[\s-]/g,'');
+    const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`);
+    const data = await res.json();
+    const key = Object.keys(data)[0];
+    if (!key) return [];
+    const b = data[key];
+    return [{ title: b.title||'', author: (b.authors||[]).map(a=>a.name).join(', '), isbn: clean,
+      cover: b.cover?.medium||b.cover?.small||'', pageCount: b.number_of_pages||null,
+      publisher: (b.publishers||[]).map(p=>p.name).join(', '), year: b.publish_date||'' }];
+  }
+  const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8&fields=key,title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median`);
+  const data = await res.json();
+  return (data.docs||[]).map(d => ({
+    title: d.title||'', author: (d.author_name||[]).join(', '), isbn: (d.isbn||[])[0]||'',
+    cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : '',
+    pageCount: d.number_of_pages_median||null, publisher: (d.publisher||[]).slice(0,2).join(', '),
+    year: d.first_publish_year ? String(d.first_publish_year) : ''
+  }));
+}
+
+// ═══════════════════════════════════════════
+// RENDERING HELPERS
+// ═══════════════════════════════════════════
+function coverHTML(src, title, size=50) {
+  if (!src) return `<div class="cover-placeholder" style="width:${size}px;height:${size*1.4}px;font-size:${size*.3}px">📖</div>`;
+  return `<img class="cover" src="${esc(src)}" alt="${esc(title)}" style="width:${size}px;height:${size*1.4}px" onerror="this.outerHTML='<div class=\\'cover-placeholder\\' style=\\'width:${size}px;height:${size*1.4}px;font-size:${size*.3}px\\'>📖</div>'">`;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+// ═══════════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════════
+function getTimerElapsed() {
+  if (timer.running && timer.start) {
+    return timer.elapsed + (Date.now() - timer.start);
+  }
+  return timer.elapsed;
+}
+
+function formatTime(ms) {
+  const totalSec = Math.floor(ms/1000);
+  const m = Math.floor(totalSec/60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function startTimer() {
+  timer.running = true; timer.start = Date.now(); saveTimer(timer);
+  startTimerTick();
+}
+function pauseTimer() {
+  timer.elapsed += (Date.now() - timer.start);
+  timer.running = false; timer.start = 0; saveTimer(timer);
+  clearInterval(timerInterval); timerInterval = null;
+  renderTimerWidget();
+}
+function resetTimer() {
+  timer = { running: false, start: 0, elapsed: 0 }; saveTimer(timer);
+  clearInterval(timerInterval); timerInterval = null;
+  renderTimerWidget();
+}
+function startTimerTick() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const el = document.getElementById('timer-display');
+    if (el) el.textContent = formatTime(getTimerElapsed());
+  }, 500);
+}
+
+function renderTimerWidget() {
+  const el = document.getElementById('widget-timer-content');
+  if (!el) return;
+  const elapsed = getTimerElapsed();
+  el.innerHTML = `
+    <div class="timer-display" id="timer-display">${formatTime(elapsed)}</div>
+    <div class="timer-controls">
+      ${timer.running
+        ? `<button class="btn btn-ghost" onclick="pauseTimer()" style="padding:7px 16px;font-size:13px">Pause</button>`
+        : `<button class="btn btn-primary" onclick="startTimer()" style="padding:7px 16px;font-size:13px">${elapsed>0?'Resume':'Start'}</button>`}
+      ${elapsed > 0 ? `<button class="btn btn-dim" onclick="resetTimer()" style="padding:7px 16px;font-size:13px">Reset</button>` : ''}
+    </div>
+    ${elapsed > 0 ? `<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--dim)">${Math.round(elapsed/60000)} min reading time</div>` : ''}
+  `;
+}
+
+// Resume timer tick if it was running
+if (timer.running) startTimerTick();
+
+// ═══════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════
+
+// -- NAV --
+const TABS = [
+  { id:'home', icon:'🏠', label:'Home' },
+  { id:'shelf', icon:'📚', label:'Shelf' },
+  { id:'pick', icon:'🎲', label:'Tonight' },
+  { id:'add', icon:'＋', label:'Add' },
+  { id:'settings', icon:'⚙️', label:'More' },
+];
+
+function renderNav() {
+  document.getElementById('nav').innerHTML = TABS.map(t =>
+    `<button class="${currentView===t.id?'active':''}" onclick="switchView('${t.id}')">
+      <span class="icon">${t.icon}</span>${t.label}
+    </button>`
+  ).join('');
+}
+
+function switchView(id) {
+  currentView = id;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  renderNav();
+  expandedBookId = null;
+  if (id === 'home') renderHome();
+  else if (id === 'shelf') renderShelf();
+  else if (id === 'pick') renderPick();
+  else if (id === 'add') renderAdd();
+  else if (id === 'settings') renderSettings();
+}
+
+// -- HOME / DASHBOARD --
+const WIDGET_DEFS = {
+  recentBooks: { label: 'Last Read', full: true },
+  timer: { label: 'Reading Timer', full: true },
+  totalBooks: { label: 'Books Owned' },
+  totalReads: { label: 'Total Reads' },
+  weekReads: { label: 'This Week' },
+  streak: { label: 'Day Streak' },
+  mostRead: { label: 'Most Read', full: true },
+};
+
+function renderHome() {
+  const s = getGlobalStats();
+  let html = '';
+
+  activeWidgets.forEach(wid => {
+    if (!WIDGET_DEFS[wid]) return;
+    const def = WIDGET_DEFS[wid];
+    const full = def.full ? ' full' : '';
+
+    if (wid === 'recentBooks') {
+      html += `<div class="widget${full}">
+        <div class="widget-label">Last Read</div>
+        ${s.recent.length ? `<div class="recent-strip">
+          ${s.recent.map(r => `
+            <div class="recent-item">
+              ${coverHTML(r.book.cover, r.book.title, 60)}
+              <div class="title">${esc(r.book.title)}</div>
+              <div class="ago">${daysAgo(r.date)===0?'Today':daysAgo(r.date)===1?'Yesterday':daysAgo(r.date)+'d ago'}</div>
+            </div>`).join('')}
+        </div>` : `<div style="color:var(--dim);font-size:13px">No reads yet — get started!</div>`}
+      </div>`;
+    }
+    else if (wid === 'timer') {
+      html += `<div class="widget${full}" id="widget-timer">
+        <div class="widget-label">Reading Timer</div>
+        <div id="widget-timer-content"></div>
+      </div>`;
+    }
+    else if (wid === 'totalBooks') {
+      html += `<div class="widget">
+        <div class="widget-label">Books Owned</div>
+        <div class="widget-value">${s.totalBooks}</div>
+        <div class="widget-sub">on your shelf</div>
+      </div>`;
+    }
+    else if (wid === 'totalReads') {
+      html += `<div class="widget">
+        <div class="widget-label">Total Reads</div>
+        <div class="widget-value">${s.totalReads}</div>
+        <div class="widget-sub">all time</div>
+      </div>`;
+    }
+    else if (wid === 'weekReads') {
+      html += `<div class="widget">
+        <div class="widget-label">This Week</div>
+        <div class="widget-value">${s.weekReads}</div>
+        <div class="widget-sub">${plural(s.weekReads,'read')} since Sunday</div>
+      </div>`;
+    }
+    else if (wid === 'streak') {
+      html += `<div class="widget">
+        <div class="widget-label">Day Streak</div>
+        <div class="widget-value">${s.streak}</div>
+        <div class="widget-sub">${s.streak>0?'🔥 Keep going!':'Start tonight!'}</div>
+      </div>`;
+    }
+    else if (wid === 'mostRead') {
+      html += `<div class="widget${full}">
+        <div class="widget-label">Most Read</div>
+        ${s.mostRead ? `<div class="flex gap-10 items-center">
+          ${coverHTML(s.mostRead.cover, s.mostRead.title, 44)}
+          <div>
+            <div style="font-weight:700;font-size:14px">${esc(s.mostRead.title)}</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:2px">${s.mostCount}× read</div>
+          </div>
+        </div>` : `<div style="color:var(--dim);font-size:13px">Log some reads first!</div>`}
+      </div>`;
+    }
+  });
+
+  document.getElementById('view-home').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--dim)">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</div>
+      <button class="pill" onclick="openWidgetEditor()">Customize</button>
+    </div>
+    <div class="widget-grid">${html}</div>
+  `;
+  renderTimerWidget();
+}
+
+function openWidgetEditor() {
+  const keys = Object.keys(WIDGET_DEFS);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h3>Dashboard Widgets</h3>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:14px">Toggle widgets to show on your home screen. Drag to reorder coming soon.</div>
+    ${keys.map(k => `<div class="setting-row">
+      <div style="font-size:14px">${WIDGET_DEFS[k].label}</div>
+      <button class="toggle ${activeWidgets.includes(k)?'on':''}" onclick="toggleWidget('${k}',this)"></button>
+    </div>`).join('')}
+    <button class="btn btn-primary w-full mt-14" onclick="this.closest('.modal-overlay').remove();renderHome()">Done</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function toggleWidget(key, btn) {
+  if (activeWidgets.includes(key)) {
+    activeWidgets = activeWidgets.filter(w => w !== key);
+    btn.classList.remove('on');
+  } else {
+    activeWidgets.push(key);
+    btn.classList.add('on');
+  }
+  saveWidgets(activeWidgets);
+}
+
+// -- SHELF --
+let shelfSort = 'recent';
+let shelfSearch = '';
+
+function renderShelf() {
+  let filtered = books.filter(b =>
+    b.title.toLowerCase().includes(shelfSearch.toLowerCase()) ||
+    b.author.toLowerCase().includes(shelfSearch.toLowerCase())
+  );
+  const sorted = [...filtered].sort((a,b) => {
+    if (shelfSort==='recent') {
+      const al = a.readLog.length ? (a.readLog[a.readLog.length-1].date||a.readLog[a.readLog.length-1]) : '0';
+      const bl = b.readLog.length ? (b.readLog[b.readLog.length-1].date||b.readLog[b.readLog.length-1]) : '0';
+      return bl.localeCompare(al);
+    }
+    if (shelfSort==='most') return b.readLog.length - a.readLog.length;
+    if (shelfSort==='alpha') return a.title.localeCompare(b.title);
+    if (shelfSort==='added') return (b.addedAt||'').localeCompare(a.addedAt||'');
+    return 0;
+  });
+
+  document.getElementById('view-shelf').innerHTML = `
+    <input class="input mb-10" placeholder="Search your shelf…" value="${esc(shelfSearch)}" oninput="shelfSearch=this.value;renderShelf()">
+    <div class="flex gap-8 flex-wrap mb-10">
+      ${['recent:Last Read','most:Most Read','alpha:A → Z','added:Added'].map(s => {
+        const [k,l] = s.split(':');
+        return `<button class="pill ${shelfSort===k?'active':''}" onclick="shelfSort='${k}';renderShelf()">${l}</button>`;
+      }).join('')}
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:10px">${plural(books.length,'book')} on shelf</div>
+    ${sorted.length === 0 ? `<div class="text-center" style="padding:40px 20px;color:var(--dim)">
+      ${books.length===0?'Your shelf is empty — add some books!':'No matches.'}
+    </div>` : ''}
+    <div class="flex flex-col gap-8">
+      ${sorted.map(b => renderBookCard(b)).join('')}
+    </div>
+  `;
+}
+
+function renderBookCard(book) {
+  const s = getStats(book);
+  const isExpanded = expandedBookId === book.id;
+  return `<div class="card">
+    <div class="book-row" onclick="toggleExpand('${book.id}')">
+      ${coverHTML(book.cover, book.title, 48)}
+      <div class="book-info">
+        <div class="book-title">${esc(book.title)}</div>
+        ${book.author ? `<div class="book-author">${esc(book.author)}</div>` : ''}
+        <div class="book-meta">
+          <span class="accent">${s.total}×</span>
+          ${s.lastDate ? `<span>last ${s.lastDate}</span>` : ''}
+          ${s.thisWeek > 0 ? `<span class="green">${s.thisWeek} this wk</span>` : ''}
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="event.stopPropagation();quickLog('${book.id}')" style="padding:7px 12px;font-size:17px">✓</button>
+    </div>
+    ${isExpanded ? renderBookDetail(book, s) : ''}
+  </div>`;
+}
+
+function renderBookDetail(book, s) {
+  return `<div class="book-detail">
+    <div class="detail-grid">
+      ${coverHTML(book.cover, book.title, 76)}
+      <div class="detail-fields">
+        ${book.author ? `<div><strong>Author:</strong> ${esc(book.author)}</div>` : ''}
+        ${book.isbn ? `<div><strong>ISBN:</strong> ${esc(book.isbn)}</div>` : ''}
+        ${book.pageCount ? `<div><strong>Pages:</strong> ${book.pageCount}</div>` : ''}
+        ${book.publisher ? `<div><strong>Publisher:</strong> ${esc(book.publisher)}</div>` : ''}
+        ${book.year ? `<div><strong>Year:</strong> ${esc(book.year)}</div>` : ''}
+        <div><strong>Read:</strong> ${plural(s.total,'time')}</div>
+        ${s.lastDuration ? `<div><strong>Last duration:</strong> ${s.lastDuration} min</div>` : ''}
+      </div>
+    </div>
+    <div class="detail-actions mt-8">
+      <button class="btn btn-ghost flex-1" onclick="logWithTimer('${book.id}')" style="font-size:13px;padding:8px">Log Tonight's Read</button>
+      <button class="btn btn-danger" onclick="confirmRemove('${book.id}')" style="font-size:13px;padding:8px 12px">Remove</button>
+    </div>
+  </div>`;
+}
+
+function toggleExpand(id) {
+  expandedBookId = expandedBookId === id ? null : id;
+  renderShelf();
+}
+
+function quickLog(id) {
+  const elapsed = getTimerElapsed();
+  const mins = elapsed > 30000 ? Math.round(elapsed/60000) : null;
+  logRead(id, mins);
+  if (mins) resetTimer();
+  toast('Read logged ✓');
+  if (currentView === 'shelf') renderShelf();
+  else if (currentView === 'home') renderHome();
+}
+
+function logWithTimer(id) {
+  const elapsed = getTimerElapsed();
+  const mins = elapsed > 30000 ? Math.round(elapsed/60000) : null;
+  logRead(id, mins);
+  if (mins) { resetTimer(); toast(`Logged with ${mins} min reading time ✓`); }
+  else toast('Read logged ✓');
+  renderShelf();
+}
+
+function confirmRemove(id) {
+  const book = books.find(b=>b.id===id);
+  if (!book) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h3>Remove Book?</h3>
+    <p style="color:var(--dim);font-size:14px;margin-bottom:16px">Remove "${esc(book.title)}" and all its read history? This can't be undone.</p>
+    <div class="flex gap-8">
+      <button class="btn btn-dim flex-1" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-danger flex-1" onclick="removeBook('${id}');this.closest('.modal-overlay').remove();expandedBookId=null;renderShelf();toast('Removed','warn')">Remove</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// -- PICK --
+let currentPick = null;
+let pickShuffling = false;
+
+function renderPick() {
+  document.getElementById('view-pick').innerHTML = `
+    <div class="text-center" style="color:var(--dim);font-size:15px;margin-bottom:20px;line-height:1.5">
+      Picks books not yet read this week, or read the fewest times overall.
+    </div>
+    <div class="text-center mb-20">
+      <button class="btn btn-primary" onclick="doPick()" style="font-size:16px;padding:14px 32px;border-radius:28px" ${books.length?'':'disabled'}>
+        ${currentPick ? 'Pick Again' : "What Should We Read?"}
+      </button>
+    </div>
+    <div id="pick-result">${currentPick ? renderPickResult(currentPick) : ''}</div>
+    ${!books.length ? '<div class="text-center" style="color:var(--dim)">Add some books first!</div>' : ''}
+  `;
+}
+
+function doPick() {
+  if (!books.length) return;
+  pickShuffling = true;
+  currentPick = null;
+  const resultEl = document.getElementById('pick-result');
+  let count = 0;
+  const iv = setInterval(() => {
+    const rnd = books[Math.floor(Math.random()*books.length)];
+    resultEl.innerHTML = `<div class="pick-card shuffling">
+      ${coverHTML(rnd.cover, rnd.title, 80)}
+      <div style="font-weight:700;font-size:18px;margin-top:12px">${esc(rnd.title)}</div>
+    </div>`;
+    count++;
+    if (count >= 8) {
+      clearInterval(iv);
+      currentPick = pickNextBook();
+      pickShuffling = false;
+      resultEl.innerHTML = renderPickResult(currentPick);
+    }
+  }, 120);
+}
+
+function renderPickResult(book) {
+  if (!book) return '';
+  const s = getStats(book);
+  return `<div class="pick-card">
+    ${coverHTML(book.cover, book.title, 90)}
+    <div style="font-weight:700;font-size:20px;margin-top:14px">${esc(book.title)}</div>
+    ${book.author ? `<div style="color:var(--dim);font-size:14px;margin-top:4px">${esc(book.author)}</div>` : ''}
+    <div style="font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:10px;line-height:1.8">
+      <div>Read ${plural(s.total,'time')} total</div>
+      <div>${s.thisWeek} time${s.thisWeek!==1?'s':''} this week</div>
+      ${s.lastDate ? `<div>Last read: ${s.lastDate}</div>` : ''}
+    </div>
+    <button class="btn btn-primary w-full mt-14" onclick="quickLog('${book.id}');renderPick()" style="font-size:15px;padding:12px">
+      We Read This Tonight ✓
+    </button>
+  </div>`;
+}
+
+// -- ADD --
+let addMode = 'search';
+let searchResults = [];
+let searchLoading = false;
+
+function renderAdd() {
+  document.getElementById('view-add').innerHTML = `
+    <div class="flex gap-8 mb-14">
+      <button class="pill ${addMode==='search'?'active':''}" onclick="addMode='search';renderAdd()">Search Online</button>
+      <button class="pill ${addMode==='manual'?'active':''}" onclick="addMode='manual';renderAdd()">Manual Entry</button>
+    </div>
+    <div id="add-content">${addMode==='search' ? renderAddSearch() : renderAddManual()}</div>
+  `;
+}
+
+function renderAddSearch() {
+  return `
+    <div class="flex gap-8 mb-10">
+      <input class="input flex-1" id="search-input" placeholder="Title, author, or ISBN…" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="btn btn-primary" onclick="doSearch()" ${searchLoading?'disabled':''} style="white-space:nowrap">${searchLoading?'…':'Search'}</button>
+    </div>
+    <div id="search-status"></div>
+    <div id="search-results" class="flex flex-col gap-8">
+      ${searchResults.map((r,i) => `<div class="search-row">
+        ${coverHTML(r.cover, r.title, 42)}
+        <div class="flex-1" style="min-width:0">
+          <div class="book-title">${esc(r.title)}</div>
+          <div class="book-author">${esc(r.author)}</div>
+          ${r.year ? `<div style="font-size:11px;color:var(--dim);font-family:var(--mono)">${esc(r.year)}</div>` : ''}
+        </div>
+        <button class="btn btn-primary" onclick="addFromSearch(${i})" style="padding:6px 14px;font-size:17px">+</button>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+async function doSearch() {
+  const input = document.getElementById('search-input');
+  if (!input || !input.value.trim()) return;
+  searchLoading = true;
+  searchResults = [];
+  renderAdd();
+  document.getElementById('search-input').value = input.value;
+  try {
+    searchResults = await searchOpenLibrary(input.value.trim());
+    if (!searchResults.length) {
+      document.getElementById('search-status').innerHTML = `<div style="color:var(--danger);font-size:13px;margin-bottom:8px">No results — try different keywords or enter manually.</div>`;
+    }
+  } catch {
+    document.getElementById('search-status').innerHTML = `<div style="color:var(--danger);font-size:13px;margin-bottom:8px">Search failed — check your connection or enter manually.</div>`;
+  }
+  searchLoading = false;
+  const val = input.value;
+  renderAdd();
+  document.getElementById('search-input').value = val;
+  document.getElementById('search-input').focus();
+}
+
+function addFromSearch(index) {
+  const r = searchResults[index];
+  if (!r) return;
+  const dup = books.find(b => (r.isbn && b.isbn === r.isbn) || b.title.toLowerCase() === r.title.toLowerCase());
+  if (dup) { toast(`"${r.title}" already on shelf`, 'warn'); return; }
+  addBook(r);
+  toast(`Added "${r.title}" ✓`);
+}
+
+function renderAddManual() {
+  return `
+    <div class="flex flex-col gap-10">
+      <input class="input" id="m-title" placeholder="Title *">
+      <input class="input" id="m-author" placeholder="Author">
+      <input class="input" id="m-isbn" placeholder="ISBN (optional)">
+      <input class="input" id="m-pages" placeholder="Page count (optional)" type="number">
+      <button class="btn btn-primary w-full" onclick="doManualAdd()">Add to Shelf</button>
+    </div>
+  `;
+}
+
+function doManualAdd() {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { toast('Title is required', 'error'); return; }
+  const author = document.getElementById('m-author').value.trim();
+  const isbn = document.getElementById('m-isbn').value.trim();
+  const pages = parseInt(document.getElementById('m-pages').value) || null;
+  const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
+  if (dup) { toast(`"${title}" already on shelf`, 'warn'); return; }
+  addBook({ title, author, isbn, pageCount: pages });
+  toast(`Added "${title}" ✓`);
+  renderAdd();
+}
+
+// -- SETTINGS --
+function renderSettings() {
+  document.getElementById('view-settings').innerHTML = `
+    <h2 style="font-size:18px;color:var(--accent);margin-bottom:16px">Data & Backup</h2>
+    <div class="card" style="padding:14px">
+      <div style="font-size:13px;color:var(--dim);margin-bottom:12px">${plural(books.length,'book')} · ${books.reduce((s,b)=>s+b.readLog.length,0)} reads logged</div>
+      <div class="flex flex-col gap-8">
+        <button class="btn btn-primary w-full" onclick="exportJSON()">Export Backup (JSON)</button>
+        <button class="btn btn-ghost w-full" onclick="exportCSV()">Export Spreadsheet (CSV)</button>
+        <label class="btn btn-ghost w-full" style="cursor:pointer">
+          Import Backup (JSON)
+          <input type="file" accept=".json" onchange="importJSON(event)" style="display:none">
+        </label>
+      </div>
+    </div>
+    <h2 style="font-size:18px;color:var(--accent);margin:24px 0 16px">About</h2>
+    <div class="card" style="padding:14px">
+      <div style="font-size:14px;line-height:1.6;color:var(--dim)">
+        <strong style="color:var(--text)">Storytime Shelf</strong> tracks bedtime reading for your family. All data is stored locally on this device.<br><br>
+        Book lookup powered by <strong style="color:var(--text)">Open Library</strong> (requires internet). Works offline for all other features.<br><br>
+        <span style="font-family:var(--mono);font-size:11px">v1.0 · Built with ♡ for bedtime</span>
+      </div>
+    </div>
+    <h2 style="font-size:18px;color:var(--accent);margin:24px 0 16px">Danger Zone</h2>
+    <div class="card" style="padding:14px">
+      <button class="btn btn-danger w-full" onclick="confirmClearAll()">Clear All Data</button>
+    </div>
+  `;
+}
+
+function exportJSON() {
+  const data = { version: 1, exportedAt: new Date().toISOString(), books, widgets: activeWidgets };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, `storytime-backup-${today()}.json`);
+  toast('Backup exported ✓');
+}
+
+function exportCSV() {
+  // Detailed CSV with one row per read event
+  const headers = ['Book Title','Author','ISBN','Pages','Publisher','Year','Date Read','Duration (min)','Read #','Total Reads','Added Date'];
+  const rows = [headers.join(',')];
+  books.forEach(b => {
+    if (b.readLog.length === 0) {
+      rows.push([b.title, b.author, b.isbn, b.pageCount||'', b.publisher, b.year, '', '', '0', '0', b.addedAt?.slice(0,10)||''].map(csvCell).join(','));
+    } else {
+      b.readLog.forEach((r, i) => {
+        const date = r.date || r;
+        const dur = r.duration || '';
+        rows.push([b.title, b.author, b.isbn, b.pageCount||'', b.publisher, b.year, date, dur, i+1, b.readLog.length, b.addedAt?.slice(0,10)||''].map(csvCell).join(','));
+      });
+    }
+  });
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  downloadBlob(blob, `storytime-log-${today()}.csv`);
+  toast('Spreadsheet exported ✓');
+}
+
+function csvCell(val) {
+  const s = String(val ?? '');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.books || !Array.isArray(data.books)) throw new Error('Invalid format');
+      // Merge: add books that don't exist by title
+      let added = 0, skipped = 0;
+      data.books.forEach(b => {
+        const exists = books.find(ex => ex.title.toLowerCase() === b.title.toLowerCase() || (b.isbn && ex.isbn === b.isbn));
+        if (exists) {
+          // Merge read logs
+          const existingDates = new Set((exists.readLog||[]).map(r => r.date||r));
+          (b.readLog||[]).forEach(r => {
+            const d = r.date || r;
+            if (!existingDates.has(d)) { exists.readLog.push(r); added++; }
+          });
+          skipped++;
+        } else {
+          books.push({ ...b, id: b.id || genId() });
+          added++;
+        }
+      });
+      saveData(books);
+      if (data.widgets) { activeWidgets = data.widgets; saveWidgets(activeWidgets); }
+      toast(`Imported! ${added} new, ${skipped} merged`);
+      renderSettings();
+    } catch (err) {
+      toast('Invalid backup file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function confirmClearAll() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h3 style="color:var(--danger)">Clear All Data?</h3>
+    <p style="color:var(--dim);font-size:14px;margin-bottom:16px">This will permanently delete all books and reading history. Export a backup first if needed.</p>
+    <div class="flex gap-8">
+      <button class="btn btn-dim flex-1" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-danger flex-1" onclick="books=[];saveData(books);activeWidgets=DEFAULT_WIDGETS.slice();saveWidgets(activeWidgets);resetTimer();this.closest('.modal-overlay').remove();renderSettings();toast('All data cleared','warn')">Clear Everything</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+renderNav();
+renderHome();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
