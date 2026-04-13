@@ -29,8 +29,9 @@
   --bar-h:58px;--bar-h-compact:48px;--bar-bottom:14px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fb);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
-#app{display:flex;flex-direction:column;height:100%}
+html{height:100%;background:var(--bg)}
+body{min-height:100%;min-height:100dvh;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fb);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
 /* ══════════════════════════════════
    HEADER
