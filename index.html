@@ -26,12 +26,13 @@
   /* Liquid Glass nav tokens (mapped from app theme) */
   --primary:var(--ac);--text-light:var(--txd);--shadow:rgba(45,58,32,.07);--border-glass:var(--bd);
   /* Nav geometry */
-  --bar-h:58px;--bar-h-compact:48px;--bar-bottom:14px;
+  --bar-h:58px;--bar-h-compact:48px;--bar-bottom:24px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{height:100%;background:var(--bg)}
-body{min-height:100%;min-height:100dvh;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fb);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+html,body{margin:0;padding:0;background:var(--bg);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+body{overflow:hidden;color:var(--tx);font-family:var(--fb)}
+#bg-fill{position:fixed;inset:0;background:var(--bg);z-index:-1;transition:background .3s}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 
 /* ══════════════════════════════════
    HEADER
@@ -229,10 +230,11 @@ body{min-height:100%;min-height:100dvh;overflow:hidden;background:var(--bg);colo
 .toast{position:fixed;top:calc(16px + var(--st));left:50%;transform:translateX(-50%);padding:8px 20px;border-radius:16px;font-size:13px;font-weight:700;font-family:var(--fd);z-index:300;animation:ti .25s ease,to .25s ease 1.5s forwards;color:#fff}
 @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(-8px)}}@keyframes to{to{opacity:0;transform:translateX(-50%) translateY(-8px)}}
 @media(display-mode:standalone){.toast{top:calc(16px + env(safe-area-inset-top,54px))}}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+::-webkit-scrollbar{display:none}*{scrollbar-width:none}
 </style>
 </head>
 <body>
+<div id="bg-fill"></div>
 <div id="app">
   <div class="hdr"><div><h1>Storytime Shelf</h1><div class="sub">Bedtime reading tracker</div></div><div class="hdr-r"><button onclick="openSet()" id="gb"></button><button onclick="tgM()" id="mb"></button></div></div>
   <div class="cnt" id="scroll-cnt"><div class="ci" id="ct"></div></div>
@@ -433,7 +435,7 @@ grid:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1
 list:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`,
 book:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4a2 2 0 012-2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h5" stroke-linecap="round"/></svg>`
 };
-function ic(n,s=24){return`<span style="display:inline-flex;width:${s}px;height:${s}px;color:var(--cs)">${I[n]||''}</span>`}
+function ic(n,s=24){return`<span style="display:inline-flex;width:${s}px;height:${s}px">${I[n]||''}</span>`}
 
 /* ══════════════════════════════════════════
    THEMES
@@ -458,7 +460,13 @@ async function rR(a){await db.reads.delete(a)}
 async function bS(id){const r=await db.reads.where('bookId').equals(id).toArray();return{total:r.length,last:r.length?r[r.length-1].date:null,thisWeek:r.filter(x=>x.date>=ws()).length}}
 async function rFD(d){return db.reads.where('date').equals(d).toArray()}
 async function gS(bk){const ar=await db.reads.toArray(),w=ws();const rc={};ar.forEach(r=>{rc[r.bookId]=(rc[r.bookId]||0)+1});let mi=null,mc=0;for(const[id,c]of Object.entries(rc))if(c>mc){mi=id;mc=c}const ad=new Set(ar.map(r=>r.date));let sk=0;const d=new Date();d.setHours(12,0,0,0);let ck=td();if(!ad.has(ck)){const y=new Date(d);y.setDate(y.getDate()-1);ck=y.toISOString().slice(0,10)}const cd=new Date(ck+'T12:00:00');for(let i=0;i<365;i++){if(ad.has(cd.toISOString().slice(0,10))){sk++;cd.setDate(cd.getDate()-1)}else break}const so=[...ar].sort((a,b)=>b.date.localeCompare(a.date));const sn=new Set(),rc2=[];for(const r of so){if(!sn.has(r.bookId)){sn.add(r.bookId);const b=bk.find(x=>x.id===r.bookId);if(b)rc2.push({book:b,date:r.date})}if(rc2.length>=3)break}return{totalBooks:bk.length,totalReads:ar.length,weekReads:ar.filter(r=>r.date>=w).length,streak:sk,mostRead:mi?bk.find(b=>b.id===mi):null,mostCount:mc,recent:rc2}}
-async function pN(bk){if(!bk.length)return null;const ar=await db.reads.toArray(),w=ws();const rc={},wc={},lr={};ar.forEach(r=>{rc[r.bookId]=(rc[r.bookId]||0)+1;if(r.date>=w)wc[r.bookId]=(wc[r.bookId]||0)+1;if(!lr[r.bookId]||r.date>lr[r.bookId])lr[r.bookId]=r.date});const sc=bk.map(b=>({book:b,score:(!(wc[b.id])?50:0)+da(lr[b.id])*2+Math.max(0,10-(rc[b.id]||0))*3+Math.random()*10}));sc.sort((a,b)=>b.score-a.score);const p=sc.slice(0,Math.min(5,sc.length));const ts=p.reduce((s,x)=>s+x.score,0);let r=Math.random()*ts;for(const x of p){r-=x.score;if(r<=0)return x.book}return p[0].book}
+async function pN(bk){
+  const now=td();
+  // Filter out paused books
+  const eligible=bk.filter(b=>{if(!b.pauseUntil)return true;if(b.pauseUntil==='forever')return false;return b.pauseUntil<now});
+  if(!eligible.length)return null;
+  const ar=await db.reads.toArray(),w=ws();const rc={},wc={},lr={};ar.forEach(r=>{rc[r.bookId]=(rc[r.bookId]||0)+1;if(r.date>=w)wc[r.bookId]=(wc[r.bookId]||0)+1;if(!lr[r.bookId]||r.date>lr[r.bookId])lr[r.bookId]=r.date});const sc=eligible.map(b=>({book:b,score:(!(wc[b.id])?50:0)+da(lr[b.id])*2+Math.max(0,10-(rc[b.id]||0))*3+Math.random()*10}));sc.sort((a,b)=>b.score-a.score);const p=sc.slice(0,Math.min(5,sc.length));const ts=p.reduce((s,x)=>s+x.score,0);let r=Math.random()*ts;for(const x of p){r-=x.score;if(r<=0)return x.book}return p[0].book
+}
 async function gSt(k,d){try{const r=await db.settings.get(k);return r?r.value:d}catch{return d}}
 async function sSt(k,v){await db.settings.put({key:k,value:v})}
 async function searchOL(q){const isI=/^[\d\-]{10,17}$/.test(q.replace(/[\s-]/g,''));if(isI){const c=q.replace(/[\s-]/g,'');const r=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${c}&format=json&jscmd=data`);const d=await r.json();const k=Object.keys(d)[0];if(!k)return[];const b=d[k];return[{title:b.title||'',author:(b.authors||[]).map(a=>a.name).join(', '),isbn:c,cover:b.cover?.medium||b.cover?.small||'',pageCount:b.number_of_pages||null,publisher:(b.publishers||[]).map(p=>p.name).join(', '),year:b.publish_date||''}]}const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=8&fields=key,title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median`);const d=await r.json();return(d.docs||[]).map(x=>({title:x.title||'',author:(x.author_name||[]).join(', '),isbn:(x.isbn||[])[0]||'',cover:x.cover_i?`https://covers.openlibrary.org/b/id/${x.cover_i}-M.jpg`:'',pageCount:x.number_of_pages_median||null,publisher:(x.publisher||[]).slice(0,2).join(', '),year:x.first_publish_year?String(x.first_publish_year):''}))}
@@ -471,7 +479,18 @@ function cg(s,t){return`<div class="cov-g">${s?`<img src="${esc(s)}" alt="${esc(
 function toast(m,b){const e=document.createElement('div');e.className='toast';e.style.background=b||'var(--ok)';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
 function dlF(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href)}
 function csvC(v){const s=String(v??'');return(s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`:s}
-function swD(o){let sy=0,cy=0,sh=null;o.addEventListener('touchstart',e=>{sh=o.querySelector('.ms');if(!sh)return;sy=e.touches[0].clientY;cy=sy},{passive:true});o.addEventListener('touchmove',e=>{if(!sh)return;cy=e.touches[0].clientY;const dy=cy-sy;if(dy>0)sh.style.transform=`translateY(${dy}px)`},{passive:true});o.addEventListener('touchend',()=>{if(!sh)return;const dy=cy-sy;if(dy>80){sh.style.transition='transform .15s';sh.style.transform='translateY(100%)';setTimeout(()=>o.remove(),150)}else{sh.style.transition='transform .15s';sh.style.transform=''}},{passive:true})}
+function swD(o){let sx=0,sy=0,cx=0,cy=0,sh=null,dir=null;
+o.addEventListener('touchstart',e=>{sh=o.querySelector('.ms');if(!sh)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;cx=sx;cy=sy;dir=null},{passive:true});
+o.addEventListener('touchmove',e=>{if(!sh)return;cx=e.touches[0].clientX;cy=e.touches[0].clientY;
+  if(!dir){const dx=Math.abs(cx-sx),dy=Math.abs(cy-sy);if(dx>8||dy>8)dir=dx>dy?'x':'y'}
+  if(dir==='y'&&cy-sy>0)sh.style.transform=`translateY(${cy-sy}px)`;
+  if(dir==='x'&&cx-sx>0)sh.style.transform=`translateX(${cx-sx}px)`;
+},{passive:true});
+o.addEventListener('touchend',()=>{if(!sh)return;const dy=cy-sy,dx=cx-sx;
+  if(dir==='y'&&dy>80){sh.style.transition='transform .15s';sh.style.transform='translateY(100%)';setTimeout(()=>o.remove(),150)}
+  else if(dir==='x'&&dx>80){sh.style.transition='transform .15s';sh.style.transform='translateX(100%)';setTimeout(()=>o.remove(),150)}
+  else{sh.style.transition='transform .15s';sh.style.transform=''}
+},{passive:true})}
 
 /* ══ Image compression ══ */
 function compressImg(file,maxW=300){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxW){h=Math.round(h*(maxW/w));w=maxW}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',0.7))};img.onerror=rej;img.src=e.target.result};r.onerror=rej;r.readAsDataURL(file)})}
@@ -635,10 +654,39 @@ async function hAd(i){const r=window._hr?.[i];if(!r)return;if(S.bk.find(b=>(r.is
    SHELF VIEW
    ══════════════════════════════════════════ */
 async function rSh(c){const st={};for(const b of S.bk)st[b.id]=await bS(b.id);const f=S.bk.filter(b=>b.title.toLowerCase().includes(S.sq.toLowerCase())||b.author.toLowerCase().includes(S.sq.toLowerCase()));const so=[...f].sort((a,b)=>{const sa=st[a.id]||{total:0,last:null},sb=st[b.id]||{total:0,last:null};if(S.ss==='recent')return(sb.last||'0').localeCompare(sa.last||'0');if(S.ss==='most')return sb.total-sa.total;if(S.ss==='alpha')return a.title.localeCompare(b.title);return(b.addedAt||'').localeCompare(a.addedAt||'')});
-let bd='';if(S.sv==='grid'){bd=`<div class="sg">${so.map(b=>{const s=st[b.id]||{total:0};return`<div class="sc" onclick="oBk('${b.id}')">${cg(b.cover,b.title)}<div class="sc-t">${esc(b.title)}</div>${s.total?`<div class="sc-c">${s.total}×</div>`:''}</div>`}).join('')}</div>`}else{bd=`<div class="sl">${so.map(b=>{const s=st[b.id]||{total:0,last:null,thisWeek:0};const it=s.last===td();return`<div class="card" style="margin-bottom:4px"><div class="slr" onclick="oBk('${b.id}')">${cv(b.cover,b.title)}<div style="flex:1;min-width:0"><div class="bt">${esc(b.title)}</div>${b.author?`<div class="ba">${esc(b.author)}</div>`:''}<div class="bm2"><span style="color:var(--ac)">${s.total}×</span>${s.last?`<span>${dal(s.last)}</span>`:''}${s.thisWeek>0?`<span style="color:var(--ok)">${s.thisWeek} wk</span>`:''}</div></div><button class="bp bp-s${it?' bp-ok':''}" onclick="event.stopPropagation();qL('${b.id}')">${it?'Saved ✓':ic('check',16)}</button></div></div>`}).join('')}</div>`}
+let bd='';const _td=td();if(S.sv==='grid'){bd=`<div class="sg">${so.map(b=>{const s=st[b.id]||{total:0};const paused=b.pauseUntil&&(b.pauseUntil==='forever'||b.pauseUntil>=_td);return`<div class="sc" onclick="oBk('${b.id}')" style="${paused?'opacity:.6':''}">${cg(b.cover,b.title)}<div class="sc-t">${esc(b.title)}</div>${s.total?`<div class="sc-c">${s.total}×</div>`:''}</div>`}).join('')}</div>`}else{bd=`<div class="sl">${so.map(b=>{const s=st[b.id]||{total:0,last:null,thisWeek:0};const it=s.last===_td;const paused=b.pauseUntil&&(b.pauseUntil==='forever'||b.pauseUntil>=_td);return`<div class="card" style="margin-bottom:4px${paused?';opacity:.7':''}"><div class="slr" onclick="oBk('${b.id}')">${cv(b.cover,b.title)}<div style="flex:1;min-width:0"><div class="bt">${esc(b.title)}${paused?'<span style="font-size:9px;color:var(--sec);font-weight:500;margin-left:6px">paused</span>':''}</div>${b.author?`<div class="ba">${esc(b.author)}</div>`:''}<div class="bm2"><span style="color:var(--ac)">${s.total}×</span>${s.last?`<span>${dal(s.last)}</span>`:''}${s.thisWeek>0?`<span style="color:var(--ok)">${s.thisWeek} wk</span>`:''}</div></div><button class="bp bp-s${it?' bp-ok':''}" onclick="event.stopPropagation();qL('${b.id}')" style="color:var(--card)">${it?'Saved ✓':ic('check',16)}</button></div></div>`}).join('')}</div>`}
 c.innerHTML=`<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input class="inp" placeholder="Search…" value="${esc(S.sq)}" oninput="S.sq=this.value;rV()" style="flex:1;font-size:13px;padding:7px 10px"><button class="pill-btn ${S.sv==='grid'?'on':''}" onclick="S.sv='grid';sSt('sv','grid');rV()" style="padding:5px 8px">${ic('grid',16)}</button><button class="pill-btn ${S.sv==='list'?'on':''}" onclick="S.sv='list';sSt('sv','list');rV()" style="padding:5px 8px">${ic('list',16)}</button></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${['recent:Last Read','most:Most Read','alpha:A → Z','added:Added'].map(s=>{const[k,l]=s.split(':');return`<button class="pill-btn ${S.ss===k?'on':''}" onclick="S.ss='${k}';rV()">${l}</button>`}).join('')}</div><div style="font-size:11px;color:var(--txd);margin-bottom:6px">${pl(S.bk.length,'book')}</div>${so.length===0?`<div style="text-align:center;padding:32px;color:var(--txd);font-family:var(--fd)">${S.bk.length===0?'Add some books!':'No matches.'}</div>`:''}${bd}`}
 function qL(id){oLM(id,td())}
-async function oBk(id){const b=S.bk.find(x=>x.id===id);if(!b)return;const s=await bS(id);const it=s.last===td();const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);o.innerHTML=`<div class="ms"><div class="gr"></div><div style="display:flex;gap:12px;margin-bottom:14px">${cv(b.cover,b.title,'cov-l')}<div style="flex:1"><div style="font-family:var(--fd);font-size:17px;font-weight:800">${esc(b.title)}</div>${b.author?`<div style="font-size:12px;color:var(--txd);margin-top:2px">${esc(b.author)}</div>`:''}${b.isbn?`<div style="font-size:10px;color:var(--txd);margin-top:4px">ISBN: ${b.isbn}</div>`:''}${b.pageCount?`<div style="font-size:10px;color:var(--txd)">Pages: ${b.pageCount}</div>`:''}${b.publisher?`<div style="font-size:10px;color:var(--txd)">${esc(b.publisher)}</div>`:''}${b.year?`<div style="font-size:10px;color:var(--txd)">${esc(b.year)}</div>`:''}<div style="color:var(--ac);font-weight:700;font-size:12px;margin-top:6px;font-family:var(--fd)">${pl(s.total,'read')} · ${s.thisWeek} this week</div></div></div><div style="display:flex;gap:8px;margin-bottom:8px"><button class="bp${it?' bp-ok':''}" style="flex:1" id="lb" onclick="dLg('${id}',this)">${it?'Saved ✓':'Log Today'}</button><button class="bg" style="flex:1" onclick="this.closest('.mo').remove();oLM('${id}','')">Pick Date</button></div><button class="bm" style="width:100%;margin-bottom:6px" onclick="this.closest('.mo').remove();openCoverEdit('${id}')">Edit Cover</button><button class="bm" style="width:100%" onclick="cRm('${id}')">Remove Book</button></div>`;document.body.appendChild(o)}
+async function oBk(id){const b=S.bk.find(x=>x.id===id);if(!b)return;const s=await bS(id);const it=s.last===td();
+  const isPaused=b.pauseUntil&&(b.pauseUntil==='forever'||b.pauseUntil>=td());
+  const pauseLabel=isPaused?(b.pauseUntil==='forever'?'Removed from rotation':'Paused until '+b.pauseUntil):'';
+  const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);
+  o.innerHTML=`<div class="ms"><div class="gr"></div><div style="display:flex;gap:12px;margin-bottom:14px">${cv(b.cover,b.title,'cov-l')}<div style="flex:1"><div style="font-family:var(--fd);font-size:17px;font-weight:800">${esc(b.title)}</div>${b.author?`<div style="font-size:12px;color:var(--txd);margin-top:2px">${esc(b.author)}</div>`:''}${b.isbn?`<div style="font-size:10px;color:var(--txd);margin-top:4px">ISBN: ${b.isbn}</div>`:''}${b.pageCount?`<div style="font-size:10px;color:var(--txd)">Pages: ${b.pageCount}</div>`:''}${b.publisher?`<div style="font-size:10px;color:var(--txd)">${esc(b.publisher)}</div>`:''}${b.year?`<div style="font-size:10px;color:var(--txd)">${esc(b.year)}</div>`:''}<div style="color:var(--ac);font-weight:700;font-size:12px;margin-top:6px;font-family:var(--fd)">${pl(s.total,'read')} · ${s.thisWeek} this week</div>${isPaused?`<div style="color:var(--sec);font-size:11px;margin-top:4px;font-family:var(--fd)">${pauseLabel}</div>`:''}</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><button class="bp${it?' bp-ok':''}" style="flex:1" id="lb" onclick="dLg('${id}',this)">${it?'Saved ✓':'Log Today'}</button><button class="bg" style="flex:1" onclick="this.closest('.mo').remove();oLM('${id}','')">Pick Date</button></div>
+    <div style="font-family:var(--fd);font-size:11px;color:var(--txd);margin-bottom:6px;margin-top:4px">TONIGHT ROTATION</div>
+    ${isPaused?`<button class="bp" style="width:100%;margin-bottom:6px;background:var(--ok)" onclick="unpauseBook('${id}')">Resume in Rotation</button>`
+    :`<div style="display:flex;gap:6px;margin-bottom:6px"><button class="bm bp-s" style="flex:1" onclick="pauseBook('${id}','week')">Skip 1 Week</button><button class="bm bp-s" style="flex:1" onclick="pauseBook('${id}','month')">Skip 1 Month</button><button class="bm bp-s" style="flex:1;color:var(--dng)" onclick="pauseBook('${id}','forever')">Remove</button></div>`}
+    <button class="bm" style="width:100%;margin-bottom:6px;margin-top:8px" onclick="this.closest('.mo').remove();openCoverEdit('${id}')">Edit Cover</button>
+    <button class="bm" style="width:100%;color:var(--dng)" onclick="cRm('${id}')">Delete Book</button></div>`;
+  document.body.appendChild(o);
+}
+
+async function pauseBook(id,duration){
+  let until;
+  if(duration==='week'){const d=new Date();d.setDate(d.getDate()+7);until=d.toISOString().slice(0,10)}
+  else if(duration==='month'){const d=new Date();d.setMonth(d.getMonth()+1);until=d.toISOString().slice(0,10)}
+  else{until='forever'}
+  await db.books.update(id,{pauseUntil:until});
+  S.bk=await db.books.toArray();
+  const msg=duration==='forever'?'Removed from rotation':duration==='week'?'Skipped for 1 week':'Skipped for 1 month';
+  toast(msg);document.querySelectorAll('.mo').forEach(m=>m.remove());rV();
+}
+
+async function unpauseBook(id){
+  await db.books.update(id,{pauseUntil:null});
+  S.bk=await db.books.toArray();
+  toast('Back in rotation!');document.querySelectorAll('.mo').forEach(m=>m.remove());rV();
+}
 async function dLg(id,btn){await lR(id);S.bk=await db.books.toArray();if(btn){btn.textContent='Saved ✓';btn.classList.add('bp-ok');btn.disabled=true}toast('Logged!');setTimeout(()=>rV(),400)}
 function cRm(id){const b=S.bk.find(x=>x.id===id);if(!b)return;const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);o.innerHTML=`<div class="ms"><div class="gr"></div><h3 style="color:var(--dng)">Remove "${esc(b.title)}"?</h3><p style="color:var(--txd);font-size:13px;margin-bottom:14px">Deletes book and all history.</p><div style="display:flex;gap:8px"><button class="bm" style="flex:1" onclick="this.closest('.mo').remove()">Cancel</button><button class="bd" style="flex:1" onclick="dRm('${id}')">Remove</button></div></div>`;document.body.appendChild(o)}
 async function dRm(id){await rB(id);S.bk=await db.books.toArray();document.querySelectorAll('.mo').forEach(m=>m.remove());toast('Removed','var(--sec)');rV()}
