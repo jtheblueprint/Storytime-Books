@@ -489,26 +489,31 @@ function oLM(bi,dd){const b=S.bk.find(x=>x.id===bi);if(!b)return;const d=dd||td(
 async function sLg(id){const d=document.getElementById('ld');if(!d)return;await lR(id,d.value);S.bk=await db.books.toArray();const b=document.getElementById('lsb');if(b){b.textContent='Saved ✓';b.classList.add('bp-ok');b.disabled=true}toast('Logged!');setTimeout(()=>{const m=document.getElementById('lm');if(m)m.remove();rV()},600)}
 
 /* Cover edit modal */
-async function oCE(id){const b=S.bk.find(x=>x.id===id);if(!b)return;const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);o.innerHTML=`<div class="ms"><div class="gr"></div><h3>Edit Cover</h3><div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">${cv(b.cover,b.title,'cov-l')}<div style="flex:1"><div class="bt">${esc(b.title)}</div><div class="ba">${esc(b.author)}</div></div></div><div style="font-size:12px;color:var(--txd);margin-bottom:6px;font-weight:600">Upload photo</div><div style="display:flex;gap:6px;margin-bottom:14px"><label class="bp bp-s" style="flex:1;cursor:pointer;text-align:center">Camera<input type="file" accept="image/*" capture="environment" onchange="hCU('${id}',this)" style="display:none"></label><label class="bp bp-s" style="flex:1;cursor:pointer;text-align:center">Library<input type="file" accept="image/*" onchange="hCU('${id}',this)" style="display:none"></label></div><button class="bg" style="width:100%;margin-bottom:8px" onclick="sCov('${id}')">Search Cover Art</button><div id="cov-r"></div>${b.cover?`<button class="bm-btn" style="width:100%;margin-top:8px" onclick="rmCov('${id}')">Remove Cover</button>`:''}</div>`;document.body.appendChild(o)}
+async function oCE(id){const b=S.bk.find(x=>x.id===id);if(!b)return;const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);o.innerHTML=`<div class="ms"><div class="gr"></div><h3>Edit Cover</h3><div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">${cv(b.cover,b.title,'cov-l')}<div style="flex:1"><div class="bt">${esc(b.title)}</div><div class="ba">${esc(b.author)}</div></div></div><div style="font-size:12px;color:var(--txd);margin-bottom:6px;font-weight:600">Upload photo</div><div style="display:flex;gap:6px;margin-bottom:14px"><label class="bp bp-s" style="flex:1;cursor:pointer;text-align:center">Camera<input type="file" accept="image/*" capture="environment" onchange="hCU('${id}',this)" style="display:none"></label><label class="bp bp-s" style="flex:1;cursor:pointer;text-align:center">Library<input type="file" accept="image/*" onchange="hCU('${id}',this)" style="display:none"></label></div><div style="font-size:12px;color:var(--txd);margin-bottom:6px;font-weight:600">Search online</div><div id="cov-r"><div style="color:var(--txd);font-size:11px;padding:8px 0">Loading covers…</div></div>${b.cover?`<button class="bm-btn" style="width:100%;margin-top:10px" onclick="rmCov('${id}')">Remove Cover</button>`:''}</div>`;document.body.appendChild(o);setTimeout(()=>sCov(id),100)}
 async function hCU(id,inp){const f=inp.files[0];if(!f)return;try{const u=await compressImg(f);await db.books.update(id,{cover:u});S.bk=await db.books.toArray();toast('Cover updated!');document.querySelectorAll('.mo').forEach(m=>m.remove());rV()}catch{toast('Failed','var(--dng)')}}
 async function sCov(id,query){
   const b=S.bk.find(x=>x.id===id);if(!b)return;
   const r=document.getElementById('cov-r');
-  r.innerHTML='<div style="color:var(--txd);font-size:11px;padding:8px 0">Searching…</div>';
+  const searchTerm=query||b.title+(b.author?' '+b.author:'');
+  r.innerHTML='<div style="color:var(--txd);font-size:11px;padding:8px 0">Searching "'+esc(searchTerm)+'"…</div>';
   const covers=[];
   try{
-    if(!query&&b.isbn){
-      covers.push(`https://covers.openlibrary.org/b/isbn/${b.isbn}-L.jpg`,`https://covers.openlibrary.org/b/isbn/${b.isbn}-M.jpg`);
-    }
-    const q=encodeURIComponent(query||b.title+(b.author?' '+b.author:''));
-    const res=await fetch(`https://openlibrary.org/search.json?q=${q}&limit=8&fields=cover_i`);
+    const q=encodeURIComponent(searchTerm);
+    const res=await fetch(`https://openlibrary.org/search.json?q=${q}&limit=12&fields=cover_i,isbn`);
     const d=await res.json();
-    if(d.docs)for(const doc of d.docs){if(doc.cover_i&&covers.length<8)covers.push(`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`)}
+    if(d.docs){
+      for(const doc of d.docs){
+        if(doc.cover_i){const url=`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;if(!covers.includes(url))covers.push(url)}
+        if(covers.length>=8)break;
+      }
+    }
   }catch{}
-  const dedupe=[...new Set(covers)].slice(0,8);
-  window._covOpts=dedupe;
-  const grid=dedupe.length?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">${dedupe.map((u,i)=>`<div style="cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid var(--bd);aspect-ratio:2/3;background:var(--acl)" onclick="pCov('${id}',${i})"><img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'" loading="lazy"></div>`).join('')}</div>`:'<div style="color:var(--dng);font-size:11px;margin-bottom:8px">No covers found for that search.</div>';
-  r.innerHTML=grid+`<div style="display:flex;gap:6px;align-items:center"><input class="inp" id="cov-q" value="${esc(query||b.title)}" placeholder="Search by title…" style="flex:1;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter')sCov('${id}',this.value)"><button class="bp bp-s" onclick="sCov('${id}',document.getElementById('cov-q').value)">Retry</button></div>`;
+  window._covOpts=covers;
+  const grid=covers.length
+    ?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">${covers.map((u,i)=>`<div style="cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid var(--bd);aspect-ratio:2/3;background:var(--acl)" onclick="pCov('${id}',${i})"><img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover;display:block" onload="if(this.naturalWidth<10)this.parentElement.style.display='none'" onerror="this.parentElement.style.display='none'" loading="lazy"></div>`).join('')}</div>`
+    :'<div style="color:var(--dng);font-size:12px;margin-bottom:8px">No covers found.</div>';
+  const retryUI=`<div style="margin-top:4px"><div style="font-size:10px;color:var(--txd);margin-bottom:4px;font-weight:600">Try a different search:</div><div style="display:flex;gap:6px"><input class="inp" id="cov-q" value="${esc(query||b.title)}" placeholder="Search by title…" style="flex:1;font-size:12px;padding:7px 10px" onkeydown="if(event.key==='Enter')sCov('${id}',this.value)"><button class="bp bp-s" onclick="sCov('${id}',document.getElementById('cov-q').value)">Search</button></div></div>`;
+  r.innerHTML=grid+retryUI;
 }
 async function pCov(id,i){const u=window._covOpts?.[i];if(!u)return;try{const r=await fetch(u);const bl=await r.blob();const du=await compressImg(new File([bl],'c.jpg',{type:'image/jpeg'}));await db.books.update(id,{cover:du});S.bk=await db.books.toArray();toast('Cover updated!');document.querySelectorAll('.mo').forEach(m=>m.remove());rV()}catch{await db.books.update(id,{cover:u});S.bk=await db.books.toArray();toast('Cover updated!');document.querySelectorAll('.mo').forEach(m=>m.remove());rV()}}
 async function rmCov(id){await db.books.update(id,{cover:''});S.bk=await db.books.toArray();toast('Removed','var(--sec)');document.querySelectorAll('.mo').forEach(m=>m.remove());rV()}
