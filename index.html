@@ -148,17 +148,19 @@ body{overflow:hidden;color:var(--tx);font-family:var(--fb);transition:background
 .pc{background:var(--card);border:3px solid var(--ac);border-radius:18px;padding:20px;text-align:center;max-width:300px;margin:0 auto;box-shadow:0 4px 16px var(--b1)}
 
 /* Carousel book picker */
-.carousel{display:flex;gap:12px;overflow-x:auto;padding:8px 4px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+.carousel{display:flex;gap:10px;overflow-x:auto;padding:6px 2px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
 .carousel::-webkit-scrollbar{display:none}
-.car-item{min-width:100px;max-width:110px;scroll-snap-align:center;cursor:pointer;text-align:center;flex-shrink:0;padding:8px;border-radius:12px;border:2px solid var(--bd);background:var(--card);transition:border-color .15s}
+.car-item{min-width:90px;max-width:96px;scroll-snap-align:center;cursor:pointer;text-align:center;flex-shrink:0;padding:6px;border-radius:12px;border:2px solid var(--bd);background:var(--card);transition:border-color .15s}
 .car-item:active{border-color:var(--ac)}
+.car-item .cov-w{--cw:78px;--ch:106px;margin:0 auto}
+.car-item .sc-t{font-size:9px;font-weight:700;margin-top:4px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* Modal */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:250;display:flex;align-items:flex-end;justify-content:center;animation:mfi .15s}
-.ms{background:var(--sf);border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + var(--sb));width:100%;max-height:85vh;overflow-y:auto;animation:msu .2s ease;border-top:2.5px solid var(--cs)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:flex;align-items:center;justify-content:center;padding:16px;animation:mfi .15s}
+.ms{background:var(--sf);border-radius:18px;padding:20px;padding-bottom:calc(20px + var(--sb));width:100%;max-width:400px;max-height:80vh;overflow-y:auto;animation:msu .25s cubic-bezier(.32,0,.15,1);border:1.5px solid var(--bd);box-shadow:0 16px 48px rgba(0,0,0,.25)}
 .ms h3{font-family:var(--fd);font-size:18px;color:var(--ac);margin-bottom:12px}
-.ms .gr{width:36px;height:4px;border-radius:2px;background:var(--bd);margin:0 auto 10px}
-@keyframes mfi{from{opacity:0}}@keyframes msu{from{transform:translateY(100%)}}
+.ms .gr{width:36px;height:4px;border-radius:2px;background:var(--bd);margin:0 auto 12px}
+@keyframes mfi{from{opacity:0}}@keyframes msu{from{opacity:0;transform:scale(.95) translateY(12px)}}
 
 /* Toggle */
 .tog{width:40px;height:22px;border-radius:11px;border:none;cursor:pointer;position:relative;transition:background .2s;background:var(--bd)}
@@ -377,8 +379,15 @@ function csvC(v){const s=String(v??'');return(s.includes(',')||s.includes('"')||
 function swD(o){
   let sx=0,sy=0,cx=0,cy=0,sh=null,dir=null;
   o.addEventListener('touchstart',e=>{sh=o.querySelector('.ms');if(!sh)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;cx=sx;cy=sy;dir=null},{passive:true});
-  o.addEventListener('touchmove',e=>{if(!sh)return;cx=e.touches[0].clientX;cy=e.touches[0].clientY;if(!dir){const dx=Math.abs(cx-sx),dy=Math.abs(cy-sy);if(dx>8||dy>8)dir=dx>dy?'x':'y'}if(dir==='y'&&cy-sy>0)sh.style.transform=`translateY(${cy-sy}px)`;if(dir==='x'&&cx-sx>0)sh.style.transform=`translateX(${cx-sx}px)`},{passive:true});
-  o.addEventListener('touchend',()=>{if(!sh)return;const dy=cy-sy,dx=cx-sx;if(dir==='y'&&dy>80){sh.style.transition='transform .15s';sh.style.transform='translateY(100%)';setTimeout(()=>o.remove(),150)}else if(dir==='x'&&dx>80){sh.style.transition='transform .15s';sh.style.transform='translateX(100%)';setTimeout(()=>o.remove(),150)}else{sh.style.transition='transform .15s';sh.style.transform=''}},{passive:true});
+  o.addEventListener('touchmove',e=>{if(!sh)return;cx=e.touches[0].clientX;cy=e.touches[0].clientY;if(!dir){const dx=Math.abs(cx-sx),dy=Math.abs(cy-sy);if(dx>8||dy>8)dir=dx>dy?'x':'y'}
+    const dy=cy-sy,dx=cx-sx;
+    if(dir==='y'&&dy>0){const p=Math.min(dy/200,1);sh.style.transform=`translateY(${dy}px) scale(${1-p*.08})`;sh.style.opacity=1-p*.4}
+    if(dir==='x'&&dx>0){const p=Math.min(dx/200,1);sh.style.transform=`translateX(${dx}px) scale(${1-p*.05})`;sh.style.opacity=1-p*.4}
+  },{passive:true});
+  o.addEventListener('touchend',()=>{if(!sh)return;const dy=cy-sy,dx=cx-sx;
+    if((dir==='y'&&dy>80)||(dir==='x'&&dx>80)){sh.style.transition='all .2s';sh.style.transform=dir==='y'?'translateY(120%) scale(.9)':'translateX(120%) scale(.9)';sh.style.opacity='0';setTimeout(()=>o.remove(),200)}
+    else{sh.style.transition='all .2s';sh.style.transform='';sh.style.opacity='1'}
+  },{passive:true});
 }
 
 function compressImg(file,maxW=300){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');let w=img.width,h=img.height;if(w>maxW){h=Math.round(h*(maxW/w));w=maxW}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.7))};img.onerror=rej;img.src=e.target.result};r.onerror=rej;r.readAsDataURL(file)})}
@@ -505,14 +514,21 @@ async function cDay(ds){
   const dayBks=rd.map(r=>({...r,book:bi[r.bookId]})).filter(r=>r.book);
   const d=new Date(ds+'T12:00:00'),lb=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}),iF=ds>td();
   const o=document.createElement('div');o.className='mo';o.onclick=e=>{if(e.target===o)o.remove()};swD(o);
+  window._cDayDs=ds;
   o.innerHTML=`<div class="ms"><div class="gr"></div><h3>${lb}</h3>
     ${iF?'<div style="font-size:11px;color:var(--sec);margin-bottom:8px;font-weight:600">Planned</div>':''}
     ${dayBks.length?`<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${dayBks.map(r=>`<div class="card" style="display:flex;gap:8px;padding:8px;align-items:center">${cv(r.book.cover,r.book.title,'cov-s')}<div style="flex:1;min-width:0"><div class="bt" style="font-size:13px">${esc(r.book.title)}</div><div class="ba">${esc(r.book.author)}</div></div><button class="bm-btn bp-s" onclick="xRd(${r.autoId},'${ds}')" style="color:var(--dng)">✕</button></div>`).join('')}</div>`:`<div style="color:var(--txd);font-size:13px;margin-bottom:12px">No books ${iF?'planned':'read'}.</div>`}
-    <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">Add a book</div>
-    <div class="carousel">${S.bk.map(b=>`<div class="car-item" onclick="aRD('${b.id}','${ds}')">${cv(b.cover,b.title,'cov-s')}<div style="font-size:10px;font-weight:700;margin-top:4px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(b.title)}</div></div>`).join('')}</div>
+    <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700">Add a book</div>
+    <input class="inp" placeholder="Search your shelf…" oninput="filterCarousel(this.value)" style="font-size:12px;padding:7px 10px;margin-bottom:8px">
+    <div class="carousel" id="day-carousel">${S.bk.map(b=>`<div class="car-item" data-title="${esc(b.title.toLowerCase())}" onclick="aRD('${b.id}','${ds}')">${cv(b.cover,b.title)}<div class="sc-t">${esc(b.title)}</div></div>`).join('')}</div>
     ${!S.bk.length?'<div style="color:var(--txd);font-size:12px;margin-top:4px">Add books to shelf first.</div>':''}
-    <button class="bm-btn" style="width:100%;margin-top:10px" onclick="this.closest('.mo').remove()">Close</button></div>`;
+  </div>`;
   document.body.appendChild(o);
+}
+function filterCarousel(q){
+  const items=document.querySelectorAll('#day-carousel .car-item');
+  const lq=q.toLowerCase();
+  items.forEach(el=>{el.style.display=el.dataset.title.includes(lq)?'':'none'});
 }
 async function aRD(id,ds){await lR(id,ds);S.bk=await db.books.toArray();toast('Added!');document.querySelectorAll('.mo').forEach(m=>m.remove());cDay(ds);rV()}
 async function xRd(a,ds){await rR(a);S.bk=await db.books.toArray();toast('Removed','var(--sec)');document.querySelectorAll('.mo').forEach(m=>m.remove());cDay(ds);rV()}
